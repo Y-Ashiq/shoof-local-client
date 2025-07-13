@@ -1,0 +1,436 @@
+"use client";
+import React, { useState } from "react";
+
+const SubmitPage = () => {
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [image, setImage] = useState<File | null>(null);
+  const [links, setLinks] = useState<string[]>([""]);
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState("");
+  const [cancelled, setCancelled] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [step, setStep] = useState(1);
+
+  // Helper for step titles
+  const stepTitles = [
+    "Personal Information",
+    "Brand Details",
+    "Links",
+    "Review & Submit",
+  ];
+
+  // Helper for progress
+  const totalSteps = stepTitles.length;
+
+  // Step navigation
+  const nextStep = () => setStep((s) => Math.min(s + 1, totalSteps));
+  const prevStep = () => setStep((s) => Math.max(s - 1, 1));
+
+  // Review summary
+  const renderSummary = () => (
+    <div className="space-y-4">
+      <div>
+        <div className="font-semibold text-gray-700">Name:</div>
+        <div className="text-gray-900">{name}</div>
+      </div>
+      <div>
+        <div className="font-semibold text-gray-700">Description:</div>
+        <div className="text-gray-900">{description}</div>
+      </div>
+      <div>
+        <div className="font-semibold text-gray-700">Image:</div>
+        {image ? (
+          <img
+            src={URL.createObjectURL(image)}
+            alt="Preview"
+            className="w-32 h-32 object-cover rounded border border-gray-200 shadow mt-2"
+          />
+        ) : (
+          <span className="text-gray-500">No image uploaded</span>
+        )}
+      </div>
+      <div>
+        <div className="font-semibold text-gray-700">Links:</div>
+        <ul className="list-disc ml-6 text-gray-900">
+          {links.filter(Boolean).length > 0 ? (
+            links.map((l, i) => <li key={i}>{l}</li>)
+          ) : (
+            <li className="text-gray-500">No links provided</li>
+          )}
+        </ul>
+      </div>
+    </div>
+  );
+
+  const handleLinkChange = (index: number, value: string) => {
+    const newLinks = [...links];
+    newLinks[index] = value;
+    setLinks(newLinks);
+  };
+
+  const addLink = () => setLinks([...links, ""]);
+  const removeLink = (index: number) => {
+    if (links.length === 1) return;
+    setLinks(links.filter((_, i) => i !== index));
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setImage(e.target.files[0]);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setImage(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    setSuccess(false);
+    try {
+      const formData = new FormData();
+      formData.append("name", name);
+      formData.append("description", description);
+      if (image) formData.append("file", image);
+      links.forEach((link, i) => formData.append(`links[${i}]`, link));
+
+      const res = await fetch("http://localhost:3000/submit-brand", {
+        method: "POST",
+        body: formData,
+      
+      });
+      if (!res.ok) throw new Error("Failed to submit");
+      setSuccess(true);
+      setName("");
+      setDescription("");
+      setImage(null);
+      setLinks([""]);
+    } catch (err: any) {
+      setError(err.message || "Unknown error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Add reset all handler
+  const resetAll = () => {
+    setName("");
+    setDescription("");
+    setImage(null);
+    setLinks([""]);
+    setStep(1);
+    setSuccess(false);
+    setError("");
+  };
+
+  if (cancelled) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-cyan-300 to-blue-400">
+        <div className="bg-white rounded-xl shadow-xl p-10 max-w-lg w-full text-center">
+          <h2 className="text-2xl font-semibold mb-4">Upload Cancelled</h2>
+          <button
+            className="mt-4 text-blue-600 hover:underline"
+            onClick={() => setCancelled(false)}
+          >
+            Go back to form
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="w-full max-w-3xl mx-auto">
+        {/* Stepper and Reset */}
+        <div className="flex items-center justify-between mt-12 mb-8">
+          <div className="flex-1">
+            <div className="flex items-center gap-0.5">
+              {stepTitles.map((title, idx) => (
+                <div key={title} className="flex items-center w-full">
+                  <div
+                    className={`h-1 w-full ${
+                      step > idx + 1
+                        ? "bg-purple-600"
+                        : step === idx + 1
+                        ? "bg-purple-600"
+                        : "bg-gray-200"
+                    } transition-all`}
+                  ></div>
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-between mt-2">
+              {stepTitles.map((title, idx) => (
+                <div
+                  key={title}
+                  className={`text-xs md:text-sm font-semibold ${
+                    step === idx + 1 ? "text-purple-700" : "text-gray-400"
+                  }`}
+                >
+                  {title}
+                </div>
+              ))}
+            </div>
+          </div>
+          <button
+            className="ml-8 px-4 py-1 border border-red-300 text-red-500 rounded hover:bg-red-50 font-medium text-sm"
+            onClick={resetAll}
+            type="button"
+          >
+            Reset All
+          </button>
+        </div>
+        {/* Card */}
+        <div className="bg-white border border-gray-200 rounded-xl px-8 py-10 mb-8">
+          <form onSubmit={handleSubmit}>
+            {/* Step 1: Personal Information */}
+            {step === 1 && (
+              <div className="mb-6 max-w-lg">
+                <label className="block font-semibold mb-1 text-gray-900">
+                  Brand Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  className="w-full border border-gray-300 rounded px-3 py-2 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                />
+              </div>
+            )}
+            {/* Step 2: Brand Details */}
+            {step === 2 && (
+              <div className="mb-6 max-w-2xl flex flex-col md:flex-row gap-8">
+                <div className="flex-1 min-w-[220px] relative">
+                  <label className="block font-semibold mb-1 text-gray-900">
+                    Image Upload
+                  </label>
+                  <div
+                    className={`flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer min-h-[140px] ${
+                      image ? "border-purple-400 bg-purple-50" : ""
+                    }`}
+                    onClick={() => {
+                      if (!image) fileInputRef.current?.click();
+                    }}
+                    onKeyDown={(e) => {
+                      if (!image && (e.key === "Enter" || e.key === " "))
+                        fileInputRef.current?.click();
+                    }}
+                    tabIndex={0}
+                    role="button"
+                    aria-label="Upload image"
+                  >
+                    {image ? (
+                      <div className="flex flex-col items-center w-full">
+                        <img
+                          src={URL.createObjectURL(image)}
+                          alt="Preview"
+                          className="w-24 h-24 object-cover rounded mb-2 border border-gray-200"
+                        />
+                        <span className="text-gray-700 text-xs mb-2">
+                          {image.name}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRemoveImage();
+                          }}
+                          className="px-2 py-1 bg-red-100 text-red-600 rounded hover:bg-red-200 text-xs font-medium"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <svg
+                          className="w-8 h-8 text-gray-300 mb-2"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M7 16a4 4 0 01.88-7.903A5.002 5.002 0 0117 9h1a3 3 0 110 6h-1"
+                          />
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M12 12v6m0 0l-3-3m3 3l3-3"
+                          />
+                        </svg>
+                        <span className="text-gray-400 text-sm">
+                          Drop files to upload <span className="mx-1">or</span>
+                        </span>
+                        <span
+                          className="text-purple-600 underline cursor-pointer text-sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            fileInputRef.current?.click();
+                          }}
+                        >
+                          browse
+                        </span>
+                      </>
+                    )}
+                  </div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    className="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer z-10"
+                    style={{ display: image ? "none" : "block" }}
+                    tabIndex={-1}
+                  />
+                </div>
+                <div className="flex-1 flex flex-col gap-4 justify-center min-w-[220px]">
+                  <div>
+                    <label className="block font-semibold mb-1 text-gray-900">
+                      Description <span className="text-red-500">*</span>
+                    </label>
+                    <textarea
+                      className="w-full border border-gray-300 rounded px-3 py-3 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-400 min-h-[80px]"
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      rows={4}
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+            {/* Step 3: Links */}
+            {step === 3 && (
+              <div className="mb-6 max-w-2xl">
+                <label className="block font-semibold mb-1 text-gray-900">
+                  Social Media & Website Links{" "}
+                  <span className="text-red-500">*</span>
+                </label>
+                {links.map((link, idx) => (
+                  <div key={idx} className="flex items-center mb-2">
+                    <input
+                      type="url"
+                      className="flex-1 border border-gray-300 rounded px-3 py-2 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                      placeholder="https://..."
+                      value={link}
+                      onChange={(e) => handleLinkChange(idx, e.target.value)}
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeLink(idx)}
+                      className="ml-2 px-2 py-1 text-red-500 hover:text-red-700 text-lg rounded"
+                      disabled={links.length === 1}
+                      aria-label="Remove link"
+                    >
+                      &times;
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={addLink}
+                  className="mt-2 px-3 py-1 bg-purple-100 text-purple-700 rounded hover:bg-purple-200 font-medium"
+                >
+                  + Add Link
+                </button>
+              </div>
+            )}
+            {/* Step 4: Review & Submit */}
+            {step === 4 && (
+              <div className="mb-6 max-w-2xl">
+                <h2 className="text-lg font-semibold mb-4 text-gray-700">
+                  Review Your Submission
+                </h2>
+                {renderSummary()}
+              </div>
+            )}
+            {/* Helper text and confidentiality notice */}
+            <div className="mt-4 mb-8">
+              <div className="text-xs text-gray-500">
+                <span className="text-red-500">*</span> Required fields
+              </div>
+              <div className="flex items-start mt-2 text-xs text-gray-400">
+                <svg
+                  className="w-4 h-4 mr-2 mt-0.5"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  viewBox="0 0 24 24"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M13 16h-1v-4h-1m1-4h.01"
+                  />
+                </svg>
+                <span>
+                  <span className="font-medium text-gray-500">
+                    Confidentiality Notice:
+                  </span>{" "}
+                  Your submission details are used solely for processing and
+                  verification purposes.
+                </span>
+              </div>
+            </div>
+            {/* Navigation Buttons */}
+            <div className="flex items-center gap-4 mt-8">
+              {step > 1 && (
+                <button
+                  type="button"
+                  className="border border-gray-300 text-gray-700 py-2 px-6 rounded font-semibold hover:bg-gray-100 transition-colors"
+                  onClick={prevStep}
+                >
+                  Previous
+                </button>
+              )}
+              {step < totalSteps && (
+                <button
+                  type="button"
+                  className="bg-purple-700 text-white py-2 px-6 rounded font-semibold hover:bg-purple-800 transition-colors"
+                  onClick={nextStep}
+                  disabled={
+                    (step === 1 && !name) ||
+                    (step === 2 && !description) ||
+                    (step === 3 && links.some((l) => !l))
+                  }
+                >
+                  Next
+                </button>
+              )}
+              {step === totalSteps && (
+                <button
+                  type="submit"
+                  className="bg-purple-700 text-white py-2 px-6 rounded font-semibold hover:bg-purple-800 disabled:opacity-50 transition-colors"
+                  disabled={loading}
+                >
+                  {loading ? "Submitting..." : "Submit"}
+                </button>
+              )}
+            </div>
+            {success && (
+              <div className="text-green-600 mt-4 text-center">
+                Submitted successfully!
+              </div>
+            )}
+            {error && (
+              <div className="text-red-600 mt-4 text-center">{error}</div>
+            )}
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default SubmitPage;
