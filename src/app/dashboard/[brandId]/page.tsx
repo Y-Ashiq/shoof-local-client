@@ -29,17 +29,18 @@ const BrandReviewPage = () => {
   const [editLinks, setEditLinks] = useState<string[]>([]);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState("");
+  const [availableTags, setAvailableTags] = useState<
+    { _id: string; name: string }[]
+  >([]);
+  // Change selectedTagIds to selectedTagId (string)
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   useEffect(() => {
     if (!brandId) return;
     const fetchBrand = async () => {
       try {
-        const res = await fetch(
-          `http://localhost:3000/brands/${brandId}`,
-          {
-           
-          }
-        );
+        const res = await fetch(`http://localhost:3000/brands/${brandId}`, {});
         if (!res.ok) throw new Error("Failed to fetch brand");
         const data = await res.json();
         setBrand(data);
@@ -57,8 +58,32 @@ const BrandReviewPage = () => {
       setEditName(brand.name);
       setEditDescription(brand.description);
       setEditLinks(brand.links && brand.links.length > 0 ? brand.links : [""]);
+      setSelectedTagIds(
+        brand.tags
+          ? brand.tags.map((t: any) => (typeof t === "string" ? t : t._id))
+          : []
+      );
     }
   }, [brand]);
+
+  useEffect(() => {
+    // Fetch available tags
+    const fetchTags = async () => {
+      try {
+        const res = await fetch("http://localhost:3000/tags");
+        if (!res.ok) throw new Error("Failed to fetch tags");
+        const data = await res.json();
+        setAvailableTags(
+          Array.isArray(data)
+            ? data.map((item) => ({ _id: item._id, name: item.tags }))
+            : []
+        );
+      } catch (err) {
+        // Optionally handle error
+      }
+    };
+    fetchTags();
+  }, []);
 
   const handleLinkChange = (index: number, value: string) => {
     const newLinks = [...editLinks];
@@ -72,41 +97,33 @@ const BrandReviewPage = () => {
     setEditLinks(editLinks.filter((_, i) => i !== index));
   };
 
-  const handlePatch = async (fields: Partial<Brand>) => {
-    setPatchLoading(true);
-    setPatchError("");
-    setPatchSuccess("");
-    try {
-      const res = await fetch(
-        `http://localhost:3000/dashboard/brands/${brandId}`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            "x-api-key": "MySecertAPIKey",
-          },
-          body: JSON.stringify(fields),
-        }
-      );
-      if (!res.ok) throw new Error("Failed to update brand");
-      const updated = await res.json();
-      setBrand(updated);
-      setPatchSuccess("Brand updated successfully!");
-    } catch (err: any) {
-      setPatchError(err.message || "Unknown error");
-    } finally {
-      setPatchLoading(false);
-    }
+  const handleTagDropdownChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const options = Array.from(e.target.selectedOptions).map((o) => o.value);
+    setSelectedTagIds(options);
+  };
+  const handleRemoveTag = (id: string) => {
+    setSelectedTagIds(selectedTagIds.filter((tagId) => tagId !== id));
   };
 
-  const handleApprove = () => handlePatch({ status: "approved" });
-  const handleReject = () => handlePatch({ status: "rejected" });
+  // Dropdown toggle handler
+  const toggleDropdown = () => setDropdownOpen((open) => !open);
+  const handleSelectTag = (id: string) => {
+    if (!selectedTagIds.includes(id)) {
+      setSelectedTagIds([...selectedTagIds, id]);
+    }
+    setDropdownOpen(false);
+  };
+
   const handleUpdate = () =>
     handlePatch({
       name: editName,
       description: editDescription,
       links: editLinks,
+      tags: selectedTagIds,
     });
+
+  const handleApprove = () => handlePatch({ status: "approved" });
+  const handleReject = () => handlePatch({ status: "rejected" });
 
   const handleDelete = async () => {
     if (
@@ -133,6 +150,33 @@ const BrandReviewPage = () => {
       setDeleteError(err.message || "Unknown error");
     } finally {
       setDeleteLoading(false);
+    }
+  };
+
+  const handlePatch = async (fields: Partial<Brand>) => {
+    setPatchLoading(true);
+    setPatchError("");
+    setPatchSuccess("");
+    try {
+      const res = await fetch(
+        `http://localhost:3000/dashboard/brands/${brandId}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-key": "MySecertAPIKey",
+          },
+          body: JSON.stringify(fields),
+        }
+      );
+      if (!res.ok) throw new Error("Failed to update brand");
+      const updated = await res.json();
+      setBrand(updated);
+      setPatchSuccess("Brand updated successfully!");
+    } catch (err: any) {
+      setPatchError(err.message || "Unknown error");
+    } finally {
+      setPatchLoading(false);
     }
   };
 
@@ -228,23 +272,83 @@ const BrandReviewPage = () => {
                     + Add Link
                   </button>
                 </div>
-                {brand.tags.length > 0 && (
-                  <div className="mt-4">
-                    <div className="font-semibold text-gray-700 mb-1">
-                      Tags:
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {brand.tags.map((tag, i) => (
-                        <span
-                          key={i}
-                          className="bg-gray-200 text-gray-700 px-2 py-0.5 rounded text-xs"
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
+                <div className="mt-4 relative">
+                  <label className="block font-semibold mb-1 text-gray-900">
+                    Tags
+                  </label>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      className="w-full border border-gray-300 rounded px-3 py-2 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-400 flex justify-between items-center shadow-sm"
+                      onClick={toggleDropdown}
+                      disabled={patchLoading}
+                    >
+                      <span>
+                        {selectedTagIds.length === 0
+                          ? "Select tags..."
+                          : `${selectedTagIds.length} tag(s) selected`}
+                      </span>
+                      <svg
+                        className={`ml-2 w-4 h-4 transition-transform ${
+                          dropdownOpen ? "rotate-180" : ""
+                        }`}
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        viewBox="0 0 24 24"
+                      >
+                        <path d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                    {dropdownOpen && (
+                      <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg max-h-56 overflow-auto p-2 flex flex-wrap gap-2">
+                        {availableTags.filter(
+                          (tag) => !selectedTagIds.includes(tag._id)
+                        ).length === 0 ? (
+                          <div className="px-4 py-2 text-gray-400 text-sm w-full">
+                            No more tags
+                          </div>
+                        ) : (
+                          availableTags
+                            .filter((tag) => !selectedTagIds.includes(tag._id))
+                            .map((tag) => (
+                              <button
+                                key={tag._id}
+                                type="button"
+                                className="px-3 py-1 rounded-full bg-purple-50 text-purple-800 text-xs font-semibold hover:bg-purple-200 transition-colors border border-purple-200 shadow-sm flex items-center"
+                                onClick={() => handleSelectTag(tag._id)}
+                              >
+                                {tag.name}
+                              </button>
+                            ))
+                        )}
+                      </div>
+                    )}
                   </div>
-                )}
+                  {/* Show selected tags as pills */}
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {selectedTagIds.map((id) => {
+                      const tag = availableTags.find((t) => t._id === id);
+                      if (!tag) return null;
+                      return (
+                        <span
+                          key={id}
+                          className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-xs flex items-center gap-1 border border-purple-200 shadow-sm"
+                        >
+                          {tag.name}
+                          <button
+                            type="button"
+                            className="ml-1 text-purple-500 hover:text-purple-800 focus:outline-none"
+                            onClick={() => handleRemoveTag(id)}
+                            aria-label="Remove tag"
+                          >
+                            &times;
+                          </button>
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
             </div>
             <div className="flex gap-4 mt-8">
@@ -273,7 +377,9 @@ const BrandReviewPage = () => {
                   patchLoading ||
                   (editName === brand.name &&
                     editDescription === brand.description &&
-                    JSON.stringify(editLinks) === JSON.stringify(brand.links))
+                    JSON.stringify(editLinks) === JSON.stringify(brand.links) &&
+                    JSON.stringify(selectedTagIds) ===
+                      JSON.stringify(brand.tags))
                 }
               >
                 {patchLoading ? "Updating..." : "Update"}

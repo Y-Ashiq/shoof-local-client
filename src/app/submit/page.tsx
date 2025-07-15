@@ -1,11 +1,17 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 const SubmitPage = () => {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [image, setImage] = useState<File | null>(null);
   const [links, setLinks] = useState<string[]>([""]);
+  // Replace tags state with selectedTagIds and availableTags
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
+  const [availableTags, setAvailableTags] = useState<
+    { _id: string; name: string }[]
+  >([]);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
@@ -61,6 +67,27 @@ const SubmitPage = () => {
           )}
         </ul>
       </div>
+      <div>
+        <div className="font-semibold text-gray-700">Tags:</div>
+        <ul className="flex flex-wrap gap-2 text-gray-900">
+          {selectedTagIds.length > 0 ? (
+            selectedTagIds.map((tagId) => {
+              const tag = availableTags.find((t) => t._id === tagId);
+              if (!tag) return null;
+              return (
+                <li
+                  key={tagId}
+                  className="bg-gray-200 px-2 py-0.5 rounded-full text-xs"
+                >
+                  {tag.name}
+                </li>
+              );
+            })
+          ) : (
+            <li className="text-gray-500">No tags provided</li>
+          )}
+        </ul>
+      </div>
     </div>
   );
 
@@ -74,6 +101,18 @@ const SubmitPage = () => {
   const removeLink = (index: number) => {
     if (links.length === 1) return;
     setLinks(links.filter((_, i) => i !== index));
+  };
+
+  // Dropdown handlers for tags
+  const toggleDropdown = () => setDropdownOpen((open) => !open);
+  const handleSelectTag = (id: string) => {
+    if (!selectedTagIds.includes(id)) {
+      setSelectedTagIds([...selectedTagIds, id]);
+    }
+    setDropdownOpen(false);
+  };
+  const handleRemoveTag = (id: string) => {
+    setSelectedTagIds(selectedTagIds.filter((tagId) => tagId !== id));
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -98,11 +137,13 @@ const SubmitPage = () => {
       formData.append("description", description);
       if (image) formData.append("file", image);
       links.forEach((link, i) => formData.append(`links[${i}]`, link));
+      selectedTagIds.forEach((tagId, i) =>
+        formData.append(`tags[${i}]`, tagId)
+      );
 
       const res = await fetch("http://localhost:3000/submit-brand", {
         method: "POST",
         body: formData,
-      
       });
       if (!res.ok) throw new Error("Failed to submit");
       setSuccess(true);
@@ -110,6 +151,7 @@ const SubmitPage = () => {
       setDescription("");
       setImage(null);
       setLinks([""]);
+      setSelectedTagIds([]);
     } catch (err: any) {
       setError(err.message || "Unknown error");
     } finally {
@@ -123,10 +165,58 @@ const SubmitPage = () => {
     setDescription("");
     setImage(null);
     setLinks([""]);
+    setSelectedTagIds([]);
     setStep(1);
     setSuccess(false);
     setError("");
   };
+
+  // Add Enter key navigation for steps
+  const handleFormKeyDown = (e: React.KeyboardEvent<HTMLFormElement>) => {
+    // Don't trigger on textarea, dropdown, or if dropdown is open
+    const target = e.target as HTMLElement;
+    if (
+      target.tagName === "TEXTAREA" ||
+      (dropdownOpen && step === 3) // prevent Enter in tag dropdown
+    ) {
+      return;
+    }
+    if (e.key === "Enter") {
+      if (step < totalSteps) {
+        // Validate current step before advancing
+        if (
+          (step === 1 && !name) ||
+          (step === 2 && !description) ||
+          (step === 3 && links.some((l) => !l))
+        ) {
+          e.preventDefault();
+          return;
+        }
+        e.preventDefault();
+        nextStep();
+      }
+      // On last step, let form submit
+    }
+  };
+
+  // Fetch available tags on mount
+  useEffect(() => {
+    const fetchTags = async () => {
+      try {
+        const res = await fetch("http://localhost:3000/tags");
+        if (!res.ok) throw new Error("Failed to fetch tags");
+        const data = await res.json();
+        setAvailableTags(
+          Array.isArray(data)
+            ? data.map((item: any) => ({ _id: item._id, name: item.tags }))
+            : []
+        );
+      } catch (err) {
+        // Optionally handle error
+      }
+    };
+    fetchTags();
+  }, []);
 
   if (cancelled) {
     return (
@@ -188,7 +278,7 @@ const SubmitPage = () => {
         </div>
         {/* Card */}
         <div className="bg-white border border-gray-200 rounded-xl px-8 py-10 mb-8">
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown}>
             {/* Step 1: Personal Information */}
             {step === 1 && (
               <div className="mb-6 max-w-lg">
@@ -343,6 +433,84 @@ const SubmitPage = () => {
                 >
                   + Add Link
                 </button>
+                {/* Tags input - dashboard style */}
+                <div className="mt-6">
+                  <label className="block font-semibold mb-1 text-gray-900">
+                    Tags (select all that apply)
+                  </label>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      className="w-full border border-gray-300 rounded px-3 py-2 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-400 flex justify-between items-center shadow-sm"
+                      onClick={toggleDropdown}
+                      disabled={loading}
+                    >
+                      <span>
+                        {selectedTagIds.length === 0
+                          ? "Select tags..."
+                          : `${selectedTagIds.length} tag(s) selected`}
+                      </span>
+                      <svg
+                        className={`ml-2 w-4 h-4 transition-transform ${
+                          dropdownOpen ? "rotate-180" : ""
+                        }`}
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        viewBox="0 0 24 24"
+                      >
+                        <path d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                    {dropdownOpen && (
+                      <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg max-h-56 overflow-auto p-2 flex flex-wrap gap-2">
+                        {availableTags.filter(
+                          (tag) => !selectedTagIds.includes(tag._id)
+                        ).length === 0 ? (
+                          <div className="px-4 py-2 text-gray-400 text-sm w-full">
+                            No more tags
+                          </div>
+                        ) : (
+                          availableTags
+                            .filter((tag) => !selectedTagIds.includes(tag._id))
+                            .map((tag) => (
+                              <button
+                                key={tag._id}
+                                type="button"
+                                className="px-3 py-1 rounded-full bg-purple-50 text-purple-800 text-xs font-semibold hover:bg-purple-200 transition-colors border border-purple-200 shadow-sm flex items-center"
+                                onClick={() => handleSelectTag(tag._id)}
+                              >
+                                {tag.name}
+                              </button>
+                            ))
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  {/* Show selected tags as pills */}
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {selectedTagIds.map((id) => {
+                      const tag = availableTags.find((t) => t._id === id);
+                      if (!tag) return null;
+                      return (
+                        <span
+                          key={id}
+                          className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-xs flex items-center gap-1 border border-purple-200 shadow-sm"
+                        >
+                          {tag.name}
+                          <button
+                            type="button"
+                            className="ml-1 text-purple-500 hover:text-purple-800 focus:outline-none"
+                            onClick={() => handleRemoveTag(id)}
+                            aria-label="Remove tag"
+                          >
+                            &times;
+                          </button>
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
             )}
             {/* Step 4: Review & Submit */}

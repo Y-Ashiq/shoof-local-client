@@ -1,13 +1,22 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Navbar from "./components/Navbar";
+import BrandCard from "./components/BrandCard";
+import BrandModal from "./components/BrandModal";
+import TagFilter from "./components/TagFilter";
+
+interface TagObj {
+  _id: string;
+  tags: string;
+}
 
 interface Brand {
   _id: string;
   name: string;
   description: string;
   image: string;
-  tags?: string[];
+  tags?: TagObj[]; // Now array of objects
   links?: string[];
   primaryColor?: string;
 }
@@ -24,10 +33,17 @@ const HomePage = () => {
   const [searchResults, setSearchResults] = useState<Brand[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchBarOpen, setSearchBarOpen] = useState(false);
+  const [availableTags, setAvailableTags] = useState<
+    { _id: string; name: string }[]
+  >([]);
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
+  const [tagDropdownOpen, setTagDropdownOpen] = useState(false);
+  const tagDropdownRef = useRef<HTMLDivElement>(null);
 
   const router = useRouter();
   const searchParams = useSearchParams();
   const pageParam = searchParams.get("page");
+  const queryParam = searchParams.get("query") || "";
   const page = pageParam ? Math.max(1, parseInt(pageParam)) : 1;
   const [totalPages, setTotalPages] = useState(1);
   const [pageSize] = useState(8); // Brands per page
@@ -65,6 +81,116 @@ const HomePage = () => {
     };
     fetchBrands();
   }, [page]);
+
+  useEffect(() => {
+    // Fetch tags for mapping IDs to names
+    const fetchTags = async () => {
+      try {
+        const res = await fetch("http://localhost:3000/tags");
+        if (!res.ok) throw new Error("Failed to fetch tags");
+        const data = await res.json();
+        setAvailableTags(
+          Array.isArray(data)
+            ? data.map((item) => ({ _id: item._id, name: item.tags }))
+            : []
+        );
+      } catch (err) {}
+    };
+    fetchTags();
+  }, []);
+
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setSearchResults([]);
+      return;
+    }
+    setSearchLoading(true);
+    fetch(
+      `http://localhost:3000/brands/search?search=${encodeURIComponent(
+        searchQuery
+      )}`,
+      {
+        headers: { "x-api-key": "MySecertAPIKey" },
+      }
+    )
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to fetch search results");
+        return res.json();
+      })
+      .then((data) => setSearchResults(data))
+      .catch(() => setSearchResults([]))
+      .finally(() => setSearchLoading(false));
+  }, [searchQuery]);
+
+  useEffect(() => {
+    if (searchQuery) {
+    }
+  }, [searchResults, searchQuery]);
+
+  // Sync searchQuery with query param
+  useEffect(() => {
+    if (queryParam !== searchQuery) {
+      setSearchQuery(queryParam);
+    }
+  }, [queryParam]);
+
+  // Sync selectedTagIds with tags param in URL
+  useEffect(() => {
+    const tagsFromUrl = searchParams.getAll("tags");
+    if (tagsFromUrl.sort().join() !== selectedTagIds.sort().join()) {
+      setSelectedTagIds(tagsFromUrl);
+    }
+  }, [searchParams]);
+
+  // Update URL when selectedTagIds change
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("tags");
+    selectedTagIds.forEach((id) => params.append("tags", id));
+    router.replace(`/?${params.toString()}`);
+    // eslint-disable-next-line
+  }, [selectedTagIds]);
+
+  // Fetch brands with tags filter
+  useEffect(() => {
+    const fetchBrands = async () => {
+      setLoading(true);
+      try {
+        let url = `http://localhost:3000/brands?page=${page}`;
+        if (selectedTagIds.length > 0) {
+          selectedTagIds.forEach((id) => {
+            url += `&tags=${encodeURIComponent(id)}`;
+          });
+        }
+        const res = await fetch(url, {
+          headers: {
+            "x-api-key": "MySecertAPIKey",
+          },
+        });
+        if (!res.ok) throw new Error("Failed to fetch brands");
+        const data = await res.json();
+        let newBrands;
+        if (Array.isArray(data)) {
+          newBrands = data;
+          setTotalPages(1);
+        } else {
+          newBrands = data.brands || [];
+          setTotalPages(data.totalPages || 1);
+        }
+        if (newBrands.length === 0 && page > 1) {
+          router.push(`/?page=${page - 1}`);
+          return;
+        }
+        setBrands(newBrands);
+      } catch (err: any) {
+        setError(err.message || "Unknown error");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchBrands();
+    // eslint-disable-next-line
+  }, [page, selectedTagIds]);
 
   const handlePageChange = (newPage: number) => {
     router.push(`/?page=${newPage}`);
@@ -110,6 +236,14 @@ const HomePage = () => {
     setSearchBarOpen((prev) => !prev);
     setSearchQuery("");
     setSearchResults([]);
+  };
+
+  const handleSearchInputKeyDown = (
+    e: React.KeyboardEvent<HTMLInputElement>
+  ) => {
+    if (e.key === "Enter" && searchQuery.trim()) {
+      router.push(`/search?query=${encodeURIComponent(searchQuery.trim())}`);
+    }
   };
 
   function getContrastYIQ(hexcolor: string) {
@@ -230,102 +364,57 @@ const HomePage = () => {
     setModalError("");
   };
 
-  const displayBrands = searchQuery ? searchResults : brands;
+  // Pill-style tag filter UI
+  const toggleTag = (id: string) => {
+    setSelectedTagIds((prev) =>
+      prev.includes(id) ? prev.filter((tid) => tid !== id) : [...prev, id]
+    );
+  };
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        tagDropdownRef.current &&
+        !tagDropdownRef.current.contains(event.target as Node)
+      ) {
+        setTagDropdownOpen(false);
+      }
+    }
+    if (tagDropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    } else {
+      document.removeEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [tagDropdownOpen]);
+
+  // Compute displayed brands: live search + tag filter
+  const displayedBrands = Array.isArray(searchQuery ? searchResults : brands)
+    ? (searchQuery ? searchResults : brands).filter(
+        (brand) =>
+          selectedTagIds.length === 0 ||
+          (Array.isArray(brand.tags)
+            ? selectedTagIds.every((id) =>
+              (brand.tags as TagObj[]).some((tagObj) => tagObj._id === id)
+              )
+            : false)
+      )
+    : [];
 
   return (
     <>
-      {/* Navbar */}
-      <nav className="w-full border-b border-gray-200 bg-white mb-8">
-        <div className="flex items-center justify-between px-4 sm:px-6 py-4">
-          <div className="flex items-center gap-2 sm:gap-4">
-            {/* Hamburger Icon */}
-            <button aria-label="Open menu" className="focus:outline-none">
-              <svg
-                width="24"
-                height="24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                viewBox="0 0 24 24"
-              >
-                <line x1="3" y1="12" x2="21" y2="12" />
-                <line x1="3" y1="6" x2="21" y2="6" />
-                <line x1="3" y1="18" x2="21" y2="18" />
-              </svg>
-            </button>
-          </div>
-          <div className="flex-1 flex justify-center">
-            <span
-              className="text-lg sm:text-xl md:text-2xl font-bold tracking-wider text-gray-900"
-              style={{ fontFamily: "var(--font-abril)" }}
-            >
-              shoof local
-            </span>
-          </div>
-          <div className="flex items-center gap-2 sm:gap-4">
-            {/* Search Icon on the right */}
-            <button
-              aria-label="Search"
-              className="focus:outline-none hover:opacity-80 transition-opacity"
-              onClick={handleSearchIconClick}
-            >
-              <svg
-                width="22"
-                height="22"
-                fill="none"
-                stroke="black"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                viewBox="0 0 24 24"
-              >
-                <circle cx="11" cy="11" r="8" />
-                <line x1="21" y1="21" x2="16.65" y2="16.65" />
-              </svg>
-            </button>
-          </div>
-        </div>
-        {/* Search bar extends below navbar when open */}
-        {searchBarOpen && (
-          <div className="w-full bg-white border-t border-gray-200 flex justify-center py-4 animate-fadeIn">
-            <div className="w-full max-w-xl flex items-center relative">
-              <input
-                type="text"
-                placeholder="Search brands..."
-                value={searchQuery}
-                onChange={handleSearchChange}
-                className="w-full px-4 py-2 rounded-lg bg-white text-gray-900 text-base shadow focus:outline-none focus:ring-0 border-0"
-                autoFocus
-              />
-              <button
-                onClick={() => {
-                  setSearchBarOpen(false);
-                  setSearchQuery("");
-                  setSearchResults([]);
-                }}
-                className="absolute right-2 text-gray-400 hover:text-gray-700"
-                aria-label="Close search"
-              >
-                <svg
-                  width="18"
-                  height="18"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  viewBox="0 0 24 24"
-                >
-                  <line x1="18" y1="6" x2="6" y2="18" />
-                  <line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
-              </button>
-            </div>
-          </div>
-        )}
-      </nav>
+      <Navbar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
+      {/* Tag filter custom dropdown */}
+      <div className="max-w-7xl mx-auto mb-6">
+        <TagFilter
+          availableTags={availableTags}
+          selectedTagIds={selectedTagIds}
+          setSelectedTagIds={setSelectedTagIds}
+        />
+      </div>
       {/* Main content */}
       <div className="min-h-screen bg-gray-50 py-10 px-4">
         <div className="max-w-7xl mx-auto">
@@ -338,82 +427,21 @@ const HomePage = () => {
             <div className="text-gray-600 mb-4">Searching...</div>
           )}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
-            {displayBrands.map((brand) => {
-              const bgColor = brand.primaryColor || "#fff";
-              const textColor = getContrastYIQ(bgColor);
-              return (
-                <div
+            {displayedBrands.length === 0 && !loading && !searchLoading ? (
+              <div className="col-span-full text-center text-gray-400 py-8">
+                {searchQuery
+                  ? "No brands found matching your search."
+                  : "No brands found."}
+              </div>
+            ) : (
+              displayedBrands.map((brand) => (
+                <BrandCard
                   key={brand._id}
-                  className="rounded-xl shadow-lg flex flex-col justify-between h-full border border-gray-200 cursor-pointer transition-transform hover:scale-105"
-                  style={{ background: bgColor, color: textColor }}
-                  onClick={() => handleCardClick(brand._id)}
-                >
-                  <div className="p-6 flex-1 flex flex-col">
-                    <div className="flex items-center justify-center mb-4">
-                      <div
-                        className="w-20 h-20 rounded-full flex items-center justify-center border-4 border-white shadow"
-                        style={{ margin: "0 auto" }}
-                      >
-                        <img
-                          src={brand.image}
-                          alt={brand.name}
-                          className="w-16 h-16 object-cover rounded-full"
-                          style={{ display: "block" }}
-                        />
-                      </div>
-                    </div>
-                    <h2
-                      className="text-xl font-bold mb-2 text-center"
-                      style={{ color: textColor }}
-                    >
-                      {brand.name}
-                    </h2>
-                    <p
-                      className="text-sm mb-4 text-center"
-                      style={{ color: textColor }}
-                    >
-                      {brand.description.length > 100
-                        ? brand.description.slice(0, 100) + "..."
-                        : brand.description}
-                    </p>
-                    {brand.tags && brand.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-2 justify-center mb-2">
-                        {brand.tags.map((tag, i) => (
-                          <span
-                            key={i}
-                            className="bg-white/20 px-2 py-0.5 rounded text-xs"
-                            style={{
-                              color: textColor,
-                              border: `1px solid ${textColor}`,
-                            }}
-                          >
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  {brand.links && brand.links.length > 0 && (
-                    <div className="p-4 border-t border-white/20 flex flex-wrap gap-2 justify-center">
-                      {brand.links.map((link, i) => (
-                        <a
-                          key={i}
-                          href={link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="hover:opacity-80 flex items-center gap-1 text-xl"
-                          style={{ color: textColor }}
-                          onClick={(e) => e.stopPropagation()}
-                          title={link}
-                        >
-                          {getLinkIcon(link)}
-                        </a>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+                  brand={brand}
+                  onClick={handleCardClick}
+                />
+              ))
+            )}
           </div>
           {brands.length > 0 && (
             <div className="flex justify-center items-center gap-2 mt-8">
@@ -441,7 +469,7 @@ const HomePage = () => {
                 </svg>
               </button>
               <span className="mx-2 px-4 py-2 rounded-full border border-black bg-black text-white font-bold shadow-sm">
-                 {page}
+                {page}
               </span>
               <button
                 className="w-10 h-10 flex items-center justify-center rounded-full border border-black bg-white text-black font-semibold shadow-sm transition-colors duration-150 hover:bg-gray-200 disabled:opacity-50"
@@ -466,87 +494,15 @@ const HomePage = () => {
               </button>
             </div>
           )}
-          {displayBrands.length === 0 && !loading && !searchLoading && (
-            <div className="text-center text-gray-400 py-8">
-              {searchQuery
-                ? "No brands found matching your search."
-                : "No brands found."}
-            </div>
-          )}
         </div>
       </div>
-      {/* Modal for brand details */}
-      {modalOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-          onClick={closeModal}
-          style={{
-            WebkitBackdropFilter: "blur(8px)",
-            backdropFilter: "blur(8px)",
-          }}
-        >
-          <div
-            className="bg-white rounded-xl shadow-2xl max-w-lg w-full p-8 relative animate-fadeIn"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              className="absolute top-3 right-3 text-gray-400 hover:text-gray-700 text-2xl font-bold focus:outline-none"
-              onClick={closeModal}
-              aria-label="Close"
-            >
-              &times;
-            </button>
-            {modalLoading ? (
-              <div className="text-center py-12">Loading...</div>
-            ) : modalError ? (
-              <div className="text-red-600 text-center py-12">{modalError}</div>
-            ) : selectedBrand ? (
-              <div>
-                <div className="flex flex-col items-center mb-6">
-                  <img
-                    src={selectedBrand.image}
-                    alt={selectedBrand.name}
-                    className="w-24 h-24 object-cover rounded-full border-4 border-gray-200 shadow mb-2"
-                  />
-                  <h2 className="text-2xl font-bold mb-1 text-center text-gray-900">
-                    {selectedBrand.name}
-                  </h2>
-                  <div className="flex flex-wrap gap-2 justify-center mb-2">
-                    {selectedBrand.tags &&
-                      selectedBrand.tags.map((tag, i) => (
-                        <span
-                          key={i}
-                          className="bg-gray-100 px-2 py-0.5 rounded text-xs border border-gray-300 text-gray-700"
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                  </div>
-                </div>
-                <p className="text-gray-700 mb-4 text-center whitespace-pre-line">
-                  {selectedBrand.description}
-                </p>
-                {selectedBrand.links && selectedBrand.links.length > 0 && (
-                  <div className="flex flex-wrap gap-2 justify-center mb-4">
-                    {selectedBrand.links.map((link, i) => (
-                      <a
-                        key={i}
-                        href={link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="hover:opacity-80 flex items-center gap-1 text-2xl text-blue-700"
-                        title={link}
-                      >
-                        {getLinkIcon(link)}
-                      </a>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ) : null}
-          </div>
-        </div>
-      )}
+      <BrandModal
+        open={modalOpen}
+        onClose={closeModal}
+        brand={selectedBrand}
+        loading={modalLoading}
+        error={modalError}
+      />
     </>
   );
 };

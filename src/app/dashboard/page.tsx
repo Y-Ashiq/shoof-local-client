@@ -6,6 +6,7 @@ interface Brand {
   _id: string;
   name: string;
   status: string;
+  // tags: string[]; // Remove tags from interface
 }
 
 const DashboardPage = () => {
@@ -106,6 +107,7 @@ const DashboardPage = () => {
                 <th className="py-2 px-4 font-semibold text-gray-800 border-b border-gray-200 bg-gray-50">
                   Status
                 </th>
+                {/* Remove tags column header */}
                 <th className="py-2 px-4 font-semibold text-gray-800 border-b border-gray-200 bg-gray-50">
                   Actions
                 </th>
@@ -138,6 +140,7 @@ const DashboardPage = () => {
                       {brand.status}
                     </span>
                   </td>
+                  {/* Remove tags cell */}
                   <td className="py-2 px-4 align-middle">
                     <select
                       className="border border-gray-300 rounded px-2 py-1 text-xs text-gray-800 bg-white"
