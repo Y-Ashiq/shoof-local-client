@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 interface TagObj {
   _id: string;
@@ -29,68 +29,83 @@ const BrandModal: React.FC<BrandModalProps> = ({
   loading,
   error,
 }) => {
-  if (!open) return null;
+  const [show, setShow] = useState(open);
+  const [animate, setAnimate] = useState("in");
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (open) {
+      setShow(true);
+      setAnimate("in");
+    } else if (show) {
+      setAnimate("out");
+      timeoutRef.current = setTimeout(() => setShow(false), 300); // match animation duration
+    }
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, [open]);
+
+  if (!show) return null;
 
   function getLinkIcon(link: string) {
     if (/facebook\.com/i.test(link)) {
       return (
         <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 512 512"
           className="inline"
           width="22"
           height="22"
-          viewBox="0 0 24 24"
           fill="currentColor"
         >
-          <path d="M17.525 8.998h-3.02V7.498c0-.464.309-.572.527-.572h2.465V4.13L14.51 4.12c-3.01 0-3.49 2.26-3.49 3.71v1.168H8.5v3.002h2.52V20h3.485v-7.998h2.34l.18-3.004z" />
+          {/*!Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.*/}
+          <path d="M512 256C512 114.6 397.4 0 256 0S0 114.6 0 256C0 376 82.7 476.8 194.2 504.5V334.2H141.4V256h52.8V222.3c0-87.1 39.4-127.5 125-127.5c16.2 0 44.2 3.2 55.7 6.4V172c-6-.6-16.5-1-29.6-1c-42 0-58.2 15.9-58.2 57.2V256h83.6l-14.4 78.2H287V510.1C413.8 494.8 512 386.9 512 256h0z" />
         </svg>
       );
     }
     if (/instagram\.com/i.test(link)) {
       return (
         <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 448 512"
           className="inline"
           width="22"
           height="22"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
+          fill="currentColor"
         >
-          <rect x="2" y="2" width="20" height="20" rx="5" />
-          <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
-          <circle cx="17.5" cy="6.5" r="1.5" />
+          {/*!Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.*/}
+          <path d="M224.1 141c-63.6 0-114.9 51.3-114.9 114.9s51.3 114.9 114.9 114.9S339 319.5 339 255.9 287.7 141 224.1 141zm0 189.6c-41.1 0-74.7-33.5-74.7-74.7s33.5-74.7 74.7-74.7 74.7 33.5 74.7 74.7-33.6 74.7-74.7 74.7zm146.4-194.3c0 14.9-12 26.8-26.8 26.8-14.9 0-26.8-12-26.8-26.8s12-26.8 26.8-26.8 26.8 12 26.8 26.8zm76.1 27.2c-1.7-35.9-9.9-67.7-36.2-93.9-26.2-26.2-58-34.4-93.9-36.2-37-2.1-147.9-2.1-184.9 0-35.8 1.7-67.6 9.9-93.9 36.1s-34.4 58-36.2 93.9c-2.1 37-2.1 147.9 0 184.9 1.7 35.9 9.9 67.7 36.2 93.9s58 34.4 93.9 36.2c37 2.1 147.9 2.1 184.9 0 35.9-1.7 67.7-9.9 93.9-36.2 26.2-26.2 34.4-58 36.2-93.9 2.1-37 2.1-147.8 0-184.8zM398.8 388c-7.8 19.6-22.9 34.7-42.6 42.6-29.5 11.7-99.5 9-132.1 9s-102.7 2.6-132.1-9c-19.6-7.8-34.7-22.9-42.6-42.6-11.7-29.5-9-99.5-9-132.1s-2.6-102.7 9-132.1c7.8-19.6 22.9-34.7 42.6-42.6 29.5-11.7 99.5-9 132.1-9s102.7-2.6 132.1 9c19.6 7.8 34.7 22.9 42.6 42.6 11.7 29.5 9 99.5 9 132.1s2.7 102.7-9 132.1z" />
         </svg>
       );
     }
     if (/tiktok\.com/i.test(link)) {
       return (
         <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 448 512"
           className="inline"
           width="22"
           height="22"
-          viewBox="0 0 24 24"
           fill="currentColor"
         >
-          <path d="M12.75 2v12.25a2.25 2.25 0 1 1-2.25-2.25c.124 0 .246.012.364.035V9.5a5.25 5.25 0 1 0 5.25 5.25V7.75c.414.31.885.55 1.4.7V11.5a7.75 7.75 0 1 1-7.75-7.75h3.986c.09.57.32 1.1.664 1.55H12.75z" />
+          {/*!Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.*/}
+          <path d="M448 209.9a210.1 210.1 0 0 1 -122.8-39.3V349.4A162.6 162.6 0 1 1 185 188.3V278.2a74.6 74.6 0 1 0 52.2 71.2V0l88 0a121.2 121.2 0 0 0 1.9 22.2h0A122.2 122.2 0 0 0 381 102.4a121.4 121.4 0 0 0 67 20.1z" />
         </svg>
       );
     }
     if (/twitter\.com/i.test(link)) {
       return (
         <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 512 512"
           className="inline"
           width="22"
           height="22"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
+          fill="currentColor"
         >
-          <path d="M23 3a10.9 10.9 0 0 1-3.14 1.53A4.48 4.48 0 0 0 22.4 1.64a9.09 9.09 0 0 1-2.88 1.1A4.52 4.52 0 0 0 16.5 1c-2.5 0-4.5 2.01-4.5 4.5 0 .35.04.69.11 1.02C7.69 6.4 4.07 4.67 1.64 1.64c-.38.65-.6 1.4-.6 2.2 0 1.52.77 2.86 1.94 3.65A4.48 4.48 0 0 1 1 6.13v.06c0 2.13 1.52 3.91 3.54 4.31-.37.1-.76.16-1.16.16-.28 0-.55-.03-.81-.08.55 1.72 2.16 2.97 4.07 3A9.05 9.05 0 0 1 1 19.54a12.8 12.8 0 0 0 6.95 2.04c8.34 0 12.9-6.91 12.9-12.9 0-.2 0-.39-.01-.58A9.22 9.22 0 0 0 23 3z" />
+          {/*!Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.*/}
+          <path d="M459.4 151.7c.3 4.5 .3 9.1 .3 13.6 0 138.7-105.6 298.6-298.6 298.6-59.5 0-114.7-17.2-161.1-47.1 8.4 1 16.6 1.3 25.3 1.3 49.1 0 94.2-16.6 130.3-44.8-46.1-1-84.8-31.2-98.1-72.8 6.5 1 13 1.6 19.8 1.6 9.4 0 18.8-1.3 27.6-3.6-48.1-9.7-84.1-52-84.1-103v-1.3c14 7.8 30.2 12.7 47.4 13.3-28.3-18.8-46.8-51-46.8-87.4 0-19.5 5.2-37.4 14.3-53 51.7 63.7 129.3 105.3 216.4 109.8-1.6-7.8-2.6-15.9-2.6-24 0-57.8 46.8-104.9 104.9-104.9 30.2 0 57.5 12.7 76.7 33.1 23.7-4.5 46.5-13.3 66.6-25.3-7.8 24.4-24.4 44.8-46.1 57.8 21.1-2.3 41.6-8.1 60.4-16.2-14.3 20.8-32.2 39.3-52.6 54.3z" />
         </svg>
       );
     }
@@ -122,7 +137,9 @@ const BrandModal: React.FC<BrandModalProps> = ({
       }}
     >
       <div
-        className="bg-white rounded-xl shadow-2xl max-w-lg w-full p-8 relative animate-fadeIn"
+        className={`bg-white rounded-3xl shadow-2xl max-w-lg w-full p-8 relative transition-all duration-300 transform-gpu scale-95 opacity-0 ${
+          animate === "in" ? "animate-modalIn" : "animate-modalOut"
+        }`}
         onClick={(e) => e.stopPropagation()}
       >
         <button

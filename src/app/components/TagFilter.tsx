@@ -47,9 +47,9 @@ const TagFilter: React.FC<TagFilterProps> = ({
 
   return (
     <div
-      className={`relative ${className}`}
+      className={`relative w-full max-w-xs min-w-0 ${className}`}
       ref={dropdownRef}
-      style={{ maxWidth: "220px", ...style }}
+      style={style}
     >
       {/* Pills for selected tags */}
       <div className="flex flex-wrap gap-2 mb-2">
@@ -91,8 +91,8 @@ const TagFilter: React.FC<TagFilterProps> = ({
       {/* Dropdown button */}
       <button
         type="button"
-        className="w-full border border-gray-200 rounded-md px-2 py-1 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-300 flex justify-between items-center shadow-sm hover:border-purple-400 transition-all duration-150"
-        style={{ minHeight: "32px", fontSize: "14px", maxWidth: "220px" }}
+        className="w-full max-w-xs border border-gray-200 rounded-md px-2 py-1 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-300 flex justify-between items-center shadow-sm hover:border-purple-400 transition-all duration-150 min-w-0"
+        style={{ minHeight: "32px", fontSize: "14px" }}
         onClick={() => setDropdownOpen((open) => !open)}
       >
         <span className="truncate text-sm">
@@ -115,8 +115,8 @@ const TagFilter: React.FC<TagFilterProps> = ({
       {/* Dropdown list */}
       {dropdownOpen && (
         <div
-          className="absolute z-10 mt-1 bg-white border border-gray-200 rounded-lg shadow-xl max-h-44 overflow-auto p-2 flex flex-wrap gap-2 animate-fade-in"
-          style={{ minWidth: "180px", maxWidth: "220px" }}
+          className="absolute z-10 mt-1 bg-white border border-gray-200 rounded-lg shadow-xl max-h-44 overflow-auto p-2 flex flex-wrap gap-2 animate-fade-in w-full max-w-xs min-w-0"
+          style={{}}
         >
           {availableTags.length === 0 ? (
             <div className="px-4 py-2 text-gray-400 text-xs w-full">

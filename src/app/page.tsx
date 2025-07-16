@@ -170,18 +170,20 @@ const HomePage = () => {
         if (!res.ok) throw new Error("Failed to fetch brands");
         const data = await res.json();
         let newBrands;
+        let newTotalPages;
         if (Array.isArray(data)) {
           newBrands = data;
-          setTotalPages(1);
+          newTotalPages = 1;
         } else {
           newBrands = data.brands || [];
-          setTotalPages(data.totalPages || 1);
+          newTotalPages = data.totalPages || 1;
         }
         if (newBrands.length === 0 && page > 1) {
           router.push(`/?page=${page - 1}`);
           return;
         }
         setBrands(newBrands);
+        setTotalPages(newTotalPages);
       } catch (err: any) {
         setError(err.message || "Unknown error");
       } finally {
@@ -398,7 +400,7 @@ const HomePage = () => {
           selectedTagIds.length === 0 ||
           (Array.isArray(brand.tags)
             ? selectedTagIds.every((id) =>
-              (brand.tags as TagObj[]).some((tagObj) => tagObj._id === id)
+                (brand.tags as TagObj[]).some((tagObj) => tagObj._id === id)
               )
             : false)
       )
@@ -443,7 +445,7 @@ const HomePage = () => {
               ))
             )}
           </div>
-          {brands.length > 0 && (
+          {brands.length > 0 && totalPages > 1 && (
             <div className="flex justify-center items-center gap-2 mt-8">
               <button
                 className="w-10 h-10 flex items-center justify-center rounded-full border border-black bg-white text-black font-semibold shadow-sm transition-colors duration-150 hover:bg-gray-200 disabled:opacity-50"
@@ -468,15 +470,28 @@ const HomePage = () => {
                   <path d="M15 18l-6-6 6-6" />
                 </svg>
               </button>
-              <span className="mx-2 px-4 py-2 rounded-full border border-black bg-black text-white font-bold shadow-sm">
-                {page}
-              </span>
+              {Array.from({ length: totalPages }, (_, i) => (
+                <button
+                  key={i + 1}
+                  className={`mx-1 px-4 py-2 rounded-full border font-bold shadow-sm ${
+                    page === i + 1
+                      ? "bg-black text-white border-black"
+                      : "bg-white text-black border-black hover:bg-gray-200"
+                  }`}
+                  onClick={() => router.push(`/?page=${i + 1}`)}
+                  disabled={loading}
+                >
+                  {i + 1}
+                </button>
+              ))}
               <button
                 className="w-10 h-10 flex items-center justify-center rounded-full border border-black bg-white text-black font-semibold shadow-sm transition-colors duration-150 hover:bg-gray-200 disabled:opacity-50"
                 onClick={() => {
-                  router.push(`/?page=${page + 1}`);
+                  if (page < totalPages) {
+                    router.push(`/?page=${page + 1}`);
+                  }
                 }}
-                disabled={loading}
+                disabled={page === totalPages || loading}
                 aria-label="Next page"
               >
                 <svg
