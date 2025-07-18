@@ -6,6 +6,7 @@ import BrandCard from "./components/BrandCard";
 import BrandModal from "./components/BrandModal";
 import TagFilter from "./components/TagFilter";
 import Pagination from "./components/Pagination";
+export const dynamic = "force-dynamic";
 
 interface TagObj {
   _id: string;
