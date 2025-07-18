@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { Suspense, useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Navbar from "../components/Navbar";
 import BrandCard from "../components/BrandCard";
@@ -31,7 +31,7 @@ function getContrastYIQ(hexcolor: string) {
   return yiq >= 128 ? "#222" : "#fff";
 }
 
-const SearchPage = () => {
+const SearchPageContent = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
   const search = searchParams.get("search") || "";
@@ -256,5 +256,11 @@ const SearchPage = () => {
     </>
   );
 };
+
+const SearchPage = () => (
+  <Suspense fallback={<div>Loading...</div>}>
+    <SearchPageContent />
+  </Suspense>
+);
 
 export default SearchPage;
