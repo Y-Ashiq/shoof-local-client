@@ -1,15 +1,16 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 interface Brand {
   _id: string;
   name: string;
   status: string;
-  // tags: string[]; // Remove tags from interface
 }
 
 const DashboardPage = () => {
+  const router = useRouter();
   const [brands, setBrands] = useState<Brand[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -25,21 +26,26 @@ const DashboardPage = () => {
     []
   );
   const [dashboardSearchLoading, setDashboardSearchLoading] = useState(false);
+  const [unauthorized, setUnauthorized] = useState(false);
 
   useEffect(() => {
     const fetchBrands = async () => {
       setLoading(true);
       try {
-        let url = `http://localhost:3000/dashboard/brands?page=${page}`;
+        let url = `https://shoof-local.onrender.com/dashboard/brands?page=${page}`;
         if (statusFilter !== "all") {
           url += `&status=${statusFilter}`;
         }
         const res = await fetch(url, {
           headers: {
-            "x-api-key": "MySecertAPIKey",
+            "x-api-key":process.env.NEXT_PUBLIC_API_KEY||""
+             ,
           },
         });
-        if (!res.ok) throw new Error("Failed to fetch brands");
+        if (res.status === 401) {
+          setUnauthorized(true);
+          return;
+        }
         let data = await res.json();
         let newBrands;
         let newTotalPages;
@@ -53,6 +59,8 @@ const DashboardPage = () => {
         setBrands(newBrands);
         setTotalPages(newTotalPages);
       } catch (err: any) {
+        console.log(err);
+
         setError(err.message || "Unknown error");
       } finally {
         setLoading(false);
@@ -68,16 +76,25 @@ const DashboardPage = () => {
       return;
     }
     setDashboardSearchLoading(true);
-    let url = `http://localhost:3000/dashboard/brands/search?search=${encodeURIComponent(
+    let url = `https://shoof-local.onrender.com/dashboard/brands/search?search=${encodeURIComponent(
       dashboardSearchQuery
     )}`;
     if (statusFilter !== "all") {
       url += `&status=${statusFilter}`;
     }
     fetch(url, {
-      headers: { "x-api-key": "MySecertAPIKey" },
+      headers: {
+        "x-api-key":
+          "3s4SOsYJdBoMNGVf3LLKFsksm5FOnVwQsrvYbavm0Q3sNc3GEcGc5RwWp9wcYI6T",
+      },
     })
-      .then((res) => res.json())
+      .then((res) => {
+        if (res.status === 401) {
+          setUnauthorized(true);
+          return Promise.reject();
+        }
+        return res.json();
+      })
       .then((data) =>
         setDashboardSearchResults(Array.isArray(data) ? data : [])
       )
@@ -95,14 +112,19 @@ const DashboardPage = () => {
       setDeleteError("");
       try {
         const res = await fetch(
-          `http://localhost:3000/dashboard/brands/${brandId}`,
+          `https://shoof-local.onrender.com/dashboard/brands/${brandId}`,
           {
             method: "DELETE",
             headers: {
-              "x-api-key": "MySecertAPIKey",
+              "x-api-key":
+                "3s4SOsYJdBoMNGVf3LLKFsksm5FOnVwQsrvYbavm0Q3sNc3GEcGc5RwWp9wcYI6T",
             },
           }
         );
+        if (res.status === 401) {
+          setUnauthorized(true);
+          return;
+        }
         if (!res.ok) throw new Error("Failed to delete brand");
         setBrands((prev) => prev.filter((b) => b._id !== brandId));
       } catch (err: any) {
@@ -115,16 +137,21 @@ const DashboardPage = () => {
       setStatusError("");
       try {
         const res = await fetch(
-          `http://localhost:3000/dashboard/brands/${brandId}`,
+          `https://shoof-local.onrender.com/dashboard/brands/${brandId}`,
           {
             method: "PATCH",
             headers: {
               "Content-Type": "application/json",
-              "x-api-key": "MySecertAPIKey",
+              "x-api-key":
+                "3s4SOsYJdBoMNGVf3LLKFsksm5FOnVwQsrvYbavm0Q3sNc3GEcGc5RwWp9wcYI6T",
             },
             body: JSON.stringify({ status: action }),
           }
         );
+        if (res.status === 401) {
+          setUnauthorized(true);
+          return;
+        }
         if (!res.ok) throw new Error("Failed to update status");
         const updated = await res.json();
         setBrands((prev) =>
@@ -139,6 +166,16 @@ const DashboardPage = () => {
       }
     }
   };
+
+  if (unauthorized) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-2xl font-bold text-gray-800 text-center">
+          404 | Page Not Found
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">

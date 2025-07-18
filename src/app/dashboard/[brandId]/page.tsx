@@ -35,12 +35,17 @@ const BrandReviewPage = () => {
   // Change selectedTagIds to selectedTagId (string)
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [unauthorized, setUnauthorized] = useState(false);
 
   useEffect(() => {
     if (!brandId) return;
     const fetchBrand = async () => {
       try {
-        const res = await fetch(`http://localhost:3000/brands/${brandId}`, {});
+        const res = await fetch(`https://shoof-local.onrender.com/brands/${brandId}`, {});
+        if (res.status === 401) {
+          setUnauthorized(true);
+          return;
+        }
         if (!res.ok) throw new Error("Failed to fetch brand");
         const data = await res.json();
         setBrand(data);
@@ -70,7 +75,11 @@ const BrandReviewPage = () => {
     // Fetch available tags
     const fetchTags = async () => {
       try {
-        const res = await fetch("http://localhost:3000/tags");
+        const res = await fetch("https://shoof-local.onrender.com/tags");
+        if (res.status === 401) {
+          setUnauthorized(true);
+          return;
+        }
         if (!res.ok) throw new Error("Failed to fetch tags");
         const data = await res.json();
         setAvailableTags(
@@ -136,7 +145,7 @@ const BrandReviewPage = () => {
     setDeleteError("");
     try {
       const res = await fetch(
-        `http://localhost:3000/dashboard/brands/${brandId}`,
+        `https://shoof-local.onrender.com/dashboard/brands/${brandId}`,
         {
           method: "DELETE",
           headers: {
@@ -144,6 +153,10 @@ const BrandReviewPage = () => {
           },
         }
       );
+      if (res.status === 401) {
+        setUnauthorized(true);
+        return;
+      }
       if (!res.ok) throw new Error("Failed to delete brand");
       router.push("/dashboard");
     } catch (err: any) {
@@ -159,7 +172,7 @@ const BrandReviewPage = () => {
     setPatchSuccess("");
     try {
       const res = await fetch(
-        `http://localhost:3000/dashboard/brands/${brandId}`,
+        `https://shoof-local.onrender.com/dashboard/brands/${brandId}`,
         {
           method: "PATCH",
           headers: {
@@ -169,6 +182,10 @@ const BrandReviewPage = () => {
           body: JSON.stringify(fields),
         }
       );
+      if (res.status === 401) {
+        setUnauthorized(true);
+        return;
+      }
       if (!res.ok) throw new Error("Failed to update brand");
       const updated = await res.json();
       setBrand(updated);
@@ -179,6 +196,16 @@ const BrandReviewPage = () => {
       setPatchLoading(false);
     }
   };
+
+  if (unauthorized) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-2xl font-bold text-gray-800 text-center">
+          404 | Page Not Found
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">

@@ -5,6 +5,7 @@ import Navbar from "./components/Navbar";
 import BrandCard from "./components/BrandCard";
 import BrandModal from "./components/BrandModal";
 import TagFilter from "./components/TagFilter";
+import Pagination from "./components/Pagination";
 
 interface TagObj {
   _id: string;
@@ -39,6 +40,7 @@ const HomePage = () => {
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [tagDropdownOpen, setTagDropdownOpen] = useState(false);
   const tagDropdownRef = useRef<HTMLDivElement>(null);
+  const brandGridRef = useRef<HTMLDivElement>(null);
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -52,11 +54,9 @@ const HomePage = () => {
     const fetchBrands = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`http://localhost:3000/brands?page=${page}`, {
-          headers: {
-            "x-api-key": "MySecertAPIKey",
-          },
-        });
+        const res = await fetch(
+          `https://shoof-local.onrender.com/brands?page=${page}`
+        );
         if (!res.ok) throw new Error("Failed to fetch brands");
         const data = await res.json();
         let newBrands;
@@ -81,12 +81,15 @@ const HomePage = () => {
     };
     fetchBrands();
   }, [page]);
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [page]);
 
   useEffect(() => {
     // Fetch tags for mapping IDs to names
     const fetchTags = async () => {
       try {
-        const res = await fetch("http://localhost:3000/tags");
+        const res = await fetch("https://shoof-local.onrender.com/tags");
         if (!res.ok) throw new Error("Failed to fetch tags");
         const data = await res.json();
         setAvailableTags(
@@ -106,12 +109,9 @@ const HomePage = () => {
     }
     setSearchLoading(true);
     fetch(
-      `http://localhost:3000/brands/search?search=${encodeURIComponent(
+      `https://shoof-local.onrender.com/brands/search?search=${encodeURIComponent(
         searchQuery
-      )}`,
-      {
-        headers: { "x-api-key": "MySecertAPIKey" },
-      }
+      )}`
     )
       .then((res) => {
         if (!res.ok) throw new Error("Failed to fetch search results");
@@ -156,7 +156,7 @@ const HomePage = () => {
     const fetchBrands = async () => {
       setLoading(true);
       try {
-        let url = `http://localhost:3000/brands?page=${page}`;
+        let url = `https://shoof-local.onrender.com/brands?page=${page}`;
         if (selectedTagIds.length > 0) {
           selectedTagIds.forEach((id) => {
             url += `&tags=${encodeURIComponent(id)}`;
@@ -206,7 +206,7 @@ const HomePage = () => {
     setSearchLoading(true);
     try {
       const res = await fetch(
-        `http://localhost:3000/brands/search?search=${encodeURIComponent(
+        `https://shoof-local.onrender.com/brands/search?search=${encodeURIComponent(
           query
         )}`,
         {
@@ -348,7 +348,10 @@ const HomePage = () => {
     setModalLoading(true);
     setModalError("");
     try {
-      const res = await fetch(`http://localhost:3000/brands/${brandId}`, {});
+      const res = await fetch(
+        `https://shoof-local.onrender.com/brands/${brandId}`,
+        {}
+      );
       if (!res.ok) throw new Error("Failed to fetch brand details");
       const data = await res.json();
       setSelectedBrand(data);
@@ -428,86 +431,37 @@ const HomePage = () => {
           {searchLoading && (
             <div className="text-gray-600 mb-4">Searching...</div>
           )}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
-            {displayedBrands.length === 0 && !loading && !searchLoading ? (
-              <div className="col-span-full text-center text-gray-400 py-8">
-                {searchQuery
-                  ? "No brands found matching your search."
-                  : "No brands found."}
+          <div className="relative min-h-[300px]">
+            {loading ? (
+              <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-80 z-10">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-black" />
               </div>
             ) : (
-              displayedBrands.map((brand) => (
-                <BrandCard
-                  key={brand._id}
-                  brand={brand}
-                  onClick={handleCardClick}
-                />
-              ))
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+                {displayedBrands.length === 0 && !searchLoading ? (
+                  <div className="col-span-full text-center text-gray-400 py-8">
+                    {searchQuery
+                      ? "No brands found matching your search."
+                      : "No brands found."}
+                  </div>
+                ) : (
+                  displayedBrands.map((brand) => (
+                    <BrandCard
+                      key={brand._id}
+                      brand={brand}
+                      onClick={handleCardClick}
+                    />
+                  ))
+                )}
+              </div>
             )}
           </div>
-          {brands.length > 0 && totalPages > 1 && (
-            <div className="flex justify-center items-center gap-2 mt-8">
-              <button
-                className="w-10 h-10 flex items-center justify-center rounded-full border border-black bg-white text-black font-semibold shadow-sm transition-colors duration-150 hover:bg-gray-200 disabled:opacity-50"
-                onClick={() => {
-                  if (page > 1) {
-                    router.push(`/?page=${page - 1}`);
-                  }
-                }}
-                disabled={page === 1 || loading}
-                aria-label="Previous page"
-              >
-                <svg
-                  width="20"
-                  height="20"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  viewBox="0 0 24 24"
-                >
-                  <path d="M15 18l-6-6 6-6" />
-                </svg>
-              </button>
-              {Array.from({ length: totalPages }, (_, i) => (
-                <button
-                  key={i + 1}
-                  className={`mx-1 px-4 py-2 rounded-full border font-bold shadow-sm ${
-                    page === i + 1
-                      ? "bg-black text-white border-black"
-                      : "bg-white text-black border-black hover:bg-gray-200"
-                  }`}
-                  onClick={() => router.push(`/?page=${i + 1}`)}
-                  disabled={loading}
-                >
-                  {i + 1}
-                </button>
-              ))}
-              <button
-                className="w-10 h-10 flex items-center justify-center rounded-full border border-black bg-white text-black font-semibold shadow-sm transition-colors duration-150 hover:bg-gray-200 disabled:opacity-50"
-                onClick={() => {
-                  if (page < totalPages) {
-                    router.push(`/?page=${page + 1}`);
-                  }
-                }}
-                disabled={page === totalPages || loading}
-                aria-label="Next page"
-              >
-                <svg
-                  width="20"
-                  height="20"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  viewBox="0 0 24 24"
-                >
-                  <path d="M9 6l6 6-6 6" />
-                </svg>
-              </button>
-            </div>
+          {totalPages > 1 && (
+            <Pagination
+              currentPage={page}
+              totalPages={totalPages}
+              onPageChange={(newPage) => router.push(`/?page=${newPage}`)}
+            />
           )}
         </div>
       </div>

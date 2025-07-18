@@ -5,6 +5,7 @@ import Navbar from "../components/Navbar";
 import BrandCard from "../components/BrandCard";
 import BrandModal from "../components/BrandModal";
 import TagFilter from "../components/TagFilter";
+import Pagination from "../components/Pagination";
 
 interface Brand {
   _id: string;
@@ -46,6 +47,8 @@ const SearchPage = () => {
   const [availableTags, setAvailableTags] = useState<
     { _id: string; name: string }[]
   >([]);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
@@ -67,7 +70,10 @@ const SearchPage = () => {
     setModalLoading(true);
     setModalError("");
     try {
-      const res = await fetch(`http://localhost:3000/brands/${brandId}`, {});
+      const res = await fetch(
+        `https://shoof-local.onrender.com/brands/${brandId}`,
+        {}
+      );
       if (!res.ok) throw new Error("Failed to fetch brand details");
       const data = await res.json();
       setSelectedBrand(data);
@@ -90,7 +96,18 @@ const SearchPage = () => {
       selectedTagIds.length === 0 ||
       (Array.isArray(brand.tags) &&
         selectedTagIds.every((id) =>
-          brand.tags.some((tagObj) => tagObj._id === id)
+          (brand.tags ?? []).some((tagObj) => {
+            if (typeof tagObj === "string") return tagObj === id;
+            if (
+              typeof tagObj === "object" &&
+              tagObj !== null &&
+              "_id" in tagObj &&
+              typeof (tagObj as any)._id === "string"
+            ) {
+              return (tagObj as any)._id === id;
+            }
+            return false;
+          })
         ))
   );
 
@@ -98,7 +115,7 @@ const SearchPage = () => {
   useEffect(() => {
     const fetchTags = async () => {
       try {
-        const res = await fetch("http://localhost:3000/tags");
+        const res = await fetch("https://shoof-local.onrender.com/tags");
         if (!res.ok) throw new Error("Failed to fetch tags");
         const data = await res.json();
         setAvailableTags(
@@ -113,24 +130,37 @@ const SearchPage = () => {
 
   useEffect(() => {
     // Build the query string from all searchParams
-    const params = searchParams.toString();
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("page", page.toString());
     if (!search.trim()) {
       setBrands([]);
+      setTotalPages(1);
       return;
     }
     setLoading(true);
     setError("");
-    fetch(`http://localhost:3000/brands/search/?${params}`, {
-      headers: { "x-api-key": "MySecertAPIKey" },
-    })
+    fetch(
+      `https://shoof-local.onrender.com/brands/search/?${params.toString()}`,
+      {
+        headers: { "x-api-key": "MySecertAPIKey" },
+      }
+    )
       .then((res) => {
         if (!res.ok) throw new Error("Failed to fetch search results");
         return res.json();
       })
-      .then((data) => setBrands(data))
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setBrands(data);
+          setTotalPages(1);
+        } else {
+          setBrands(data.brands || []);
+          setTotalPages(data.totalPages || 1);
+        }
+      })
       .catch((err) => setError(err.message || "Unknown error"))
       .finally(() => setLoading(false));
-  }, [search, searchParams]);
+  }, [search, searchParams, page]);
 
   return (
     <>
@@ -155,33 +185,48 @@ const SearchPage = () => {
           </h1>
           {loading && <div>Loading...</div>}
           {error && <div className="text-red-600">{error}</div>}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
-            {filteredBrands.map((brand) => (
-              <BrandCard
-                key={brand._id}
-                brand={{
-                  ...brand,
-                  tags: Array.isArray(brand.tags)
-                    ? brand.tags.map((tag) =>
-                        typeof tag === "string"
-                          ? {
-                              _id: tag,
-                              tags:
-                                availableTags.find((t) => t._id === tag)
-                                  ?.name || tag,
-                            }
-                          : tag
-                      )
-                    : [],
-                }}
-                onClick={handleCardClick}
-              />
-            ))}
+          <div className="relative min-h-[300px]">
+            {loading ? (
+              <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-80 z-10">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-black" />
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+                {filteredBrands.map((brand) => (
+                  <BrandCard
+                    key={brand._id}
+                    brand={{
+                      ...brand,
+                      tags: Array.isArray(brand.tags)
+                        ? brand.tags.map((tag) =>
+                            typeof tag === "string"
+                              ? {
+                                  _id: tag,
+                                  tags:
+                                    availableTags.find((t) => t._id === tag)
+                                      ?.name || tag,
+                                }
+                              : tag
+                          )
+                        : [],
+                    }}
+                    onClick={handleCardClick}
+                  />
+                ))}
+              </div>
+            )}
           </div>
           {filteredBrands.length === 0 && !loading && (
             <div className="text-center text-gray-400 py-8">
               No brands found matching your search.
             </div>
+          )}
+          {totalPages > 1 && (
+            <Pagination
+              currentPage={page}
+              totalPages={totalPages}
+              onPageChange={(newPage) => setPage(newPage)}
+            />
           )}
         </div>
       </div>

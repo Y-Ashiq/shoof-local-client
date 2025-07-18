@@ -141,7 +141,7 @@ const SubmitPage = () => {
         formData.append(`tags[${i}]`, tagId)
       );
 
-      const res = await fetch("http://localhost:3000/submit-brand", {
+      const res = await fetch("https://shoof-local.onrender.com/submit-brand", {
         method: "POST",
         body: formData,
       });
@@ -203,7 +203,7 @@ const SubmitPage = () => {
   useEffect(() => {
     const fetchTags = async () => {
       try {
-        const res = await fetch("http://localhost:3000/tags");
+        const res = await fetch("https://shoof-local.onrender.com/tags");
         if (!res.ok) throw new Error("Failed to fetch tags");
         const data = await res.json();
         setAvailableTags(
@@ -221,7 +221,7 @@ const SubmitPage = () => {
   if (cancelled) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-cyan-300 to-blue-400">
-        <div className="bg-white rounded-xl shadow-xl p-10 max-w-lg w-full text-center">
+        <div className="bg-white rounded-xl shadow-xl p-4 sm:p-8 md:p-10 max-w-lg w-full text-center">
           <h2 className="text-2xl font-semibold mb-4">Upload Cancelled</h2>
           <button
             className="mt-4 text-blue-600 hover:underline"
@@ -235,11 +235,11 @@ const SubmitPage = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-2 sm:px-4 md:px-0">
       <div className="w-full max-w-3xl mx-auto">
         {/* Stepper and Reset */}
-        <div className="flex items-center justify-between mt-12 mb-8">
-          <div className="flex-1">
+        <div className="flex flex-col md:flex-row items-center justify-between mt-8 md:mt-12 mb-6 md:mb-8 gap-4 md:gap-0">
+          <div className="flex-1 w-full">
             <div className="flex items-center gap-0.5">
               {stepTitles.map((title, idx) => (
                 <div key={title} className="flex items-center w-full">
@@ -269,7 +269,7 @@ const SubmitPage = () => {
             </div>
           </div>
           <button
-            className="ml-8 px-4 py-1 border border-red-300 text-red-500 rounded hover:bg-red-50 font-medium text-sm"
+            className="w-full md:w-auto ml-0 md:ml-8 px-4 py-1 border border-red-300 text-red-500 rounded hover:bg-red-50 font-medium text-sm"
             onClick={resetAll}
             type="button"
           >
@@ -277,11 +277,11 @@ const SubmitPage = () => {
           </button>
         </div>
         {/* Card */}
-        <div className="bg-white border border-gray-200 rounded-xl px-8 py-10 mb-8">
+        <div className="bg-white border border-gray-200 rounded-xl px-2 sm:px-4 md:px-8 py-6 sm:py-8 md:py-10 mb-6 md:mb-8 shadow-sm">
           <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown}>
             {/* Step 1: Personal Information */}
             {step === 1 && (
-              <div className="mb-6 max-w-lg">
+              <div className="mb-6 max-w-lg w-full">
                 <label className="block font-semibold mb-1 text-gray-900">
                   Brand Name <span className="text-red-500">*</span>
                 </label>
@@ -296,13 +296,13 @@ const SubmitPage = () => {
             )}
             {/* Step 2: Brand Details */}
             {step === 2 && (
-              <div className="mb-6 max-w-2xl flex flex-col md:flex-row gap-8">
-                <div className="flex-1 min-w-[220px] relative">
+              <div className="mb-6 max-w-2xl w-full flex flex-col md:flex-row gap-6 md:gap-8">
+                <div className="flex-1 min-w-[180px] md:min-w-[220px] relative">
                   <label className="block font-semibold mb-1 text-gray-900">
                     Image Upload
                   </label>
                   <div
-                    className={`flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer min-h-[140px] ${
+                    className={`flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer min-h-[120px] md:min-h-[140px] ${
                       image ? "border-purple-400 bg-purple-50" : ""
                     }`}
                     onClick={() => {
@@ -321,7 +321,7 @@ const SubmitPage = () => {
                         <img
                           src={URL.createObjectURL(image)}
                           alt="Preview"
-                          className="w-24 h-24 object-cover rounded mb-2 border border-gray-200"
+                          className="w-20 h-20 md:w-24 md:h-24 object-cover rounded mb-2 border border-gray-200"
                         />
                         <span className="text-gray-700 text-xs mb-2">
                           {image.name}
@@ -382,13 +382,13 @@ const SubmitPage = () => {
                     tabIndex={-1}
                   />
                 </div>
-                <div className="flex-1 flex flex-col gap-4 justify-center min-w-[220px]">
+                <div className="flex-1 flex flex-col gap-4 justify-center min-w-[180px] md:min-w-[220px]">
                   <div>
                     <label className="block font-semibold mb-1 text-gray-900">
                       Description <span className="text-red-500">*</span>
                     </label>
                     <textarea
-                      className="w-full border border-gray-300 rounded px-3 py-3 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-400 min-h-[80px]"
+                      className="w-full border border-gray-300 rounded px-3 py-3 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-400 min-h-[60px] md:min-h-[80px]"
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
                       rows={4}
@@ -400,13 +400,16 @@ const SubmitPage = () => {
             )}
             {/* Step 3: Links */}
             {step === 3 && (
-              <div className="mb-6 max-w-2xl">
+              <div className="mb-6 max-w-2xl w-full">
                 <label className="block font-semibold mb-1 text-gray-900">
                   Social Media & Website Links{" "}
                   <span className="text-red-500">*</span>
                 </label>
                 {links.map((link, idx) => (
-                  <div key={idx} className="flex items-center mb-2">
+                  <div
+                    key={idx}
+                    className="flex flex-col sm:flex-row items-stretch sm:items-center mb-2 gap-2 sm:gap-0"
+                  >
                     <input
                       type="url"
                       className="flex-1 border border-gray-300 rounded px-3 py-2 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-400"
@@ -418,7 +421,7 @@ const SubmitPage = () => {
                     <button
                       type="button"
                       onClick={() => removeLink(idx)}
-                      className="ml-2 px-2 py-1 text-red-500 hover:text-red-700 text-lg rounded"
+                      className="sm:ml-2 px-2 py-1 text-red-500 hover:text-red-700 text-lg rounded"
                       disabled={links.length === 1}
                       aria-label="Remove link"
                     >
@@ -515,7 +518,7 @@ const SubmitPage = () => {
             )}
             {/* Step 4: Review & Submit */}
             {step === 4 && (
-              <div className="mb-6 max-w-2xl">
+              <div className="mb-6 max-w-2xl w-full">
                 <h2 className="text-lg font-semibold mb-4 text-gray-700">
                   Review Your Submission
                 </h2>
@@ -552,11 +555,11 @@ const SubmitPage = () => {
               </div>
             </div>
             {/* Navigation Buttons */}
-            <div className="flex items-center gap-4 mt-8">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 mt-8">
               {step > 1 && (
                 <button
                   type="button"
-                  className="border border-gray-300 text-gray-700 py-2 px-6 rounded font-semibold hover:bg-gray-100 transition-colors"
+                  className="border border-gray-300 text-gray-700 py-2 px-6 rounded font-semibold hover:bg-gray-100 transition-colors w-full sm:w-auto"
                   onClick={prevStep}
                 >
                   Previous
@@ -565,7 +568,7 @@ const SubmitPage = () => {
               {step < totalSteps && (
                 <button
                   type="button"
-                  className="bg-purple-700 text-white py-2 px-6 rounded font-semibold hover:bg-purple-800 transition-colors"
+                  className="bg-purple-700 text-white py-2 px-6 rounded font-semibold hover:bg-purple-800 transition-colors w-full sm:w-auto"
                   onClick={nextStep}
                   disabled={
                     (step === 1 && !name) ||
@@ -579,7 +582,7 @@ const SubmitPage = () => {
               {step === totalSteps && (
                 <button
                   type="submit"
-                  className="bg-purple-700 text-white py-2 px-6 rounded font-semibold hover:bg-purple-800 disabled:opacity-50 transition-colors"
+                  className="bg-purple-700 text-white py-2 px-6 rounded font-semibold hover:bg-purple-800 disabled:opacity-50 transition-colors w-full sm:w-auto"
                   disabled={loading}
                 >
                   {loading ? "Submitting..." : "Submit"}
