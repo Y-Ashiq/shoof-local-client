@@ -6,6 +6,7 @@ import BrandCard from "../components/BrandCard";
 import BrandModal from "../components/BrandModal";
 import TagFilter from "../components/TagFilter";
 import Pagination from "../components/Pagination";
+export const dynamic = "force-dynamic";
 
 interface Brand {
   _id: string;
@@ -72,7 +73,6 @@ const SearchPage = () => {
     try {
       const res = await fetch(
         `https://shoof-local.onrender.com/brands/${brandId}`,
-        {}
       );
       if (!res.ok) throw new Error("Failed to fetch brand details");
       const data = await res.json();
@@ -140,10 +140,7 @@ const SearchPage = () => {
     setLoading(true);
     setError("");
     fetch(
-      `https://shoof-local.onrender.com/brands/search/?${params.toString()}`,
-      {
-        headers: { "x-api-key": "MySecertAPIKey" },
-      }
+      `https://shoof-local.onrender.com/brands/search/?${params.toString()}`
     )
       .then((res) => {
         if (!res.ok) throw new Error("Failed to fetch search results");
