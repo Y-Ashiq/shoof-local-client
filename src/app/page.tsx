@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useRef, useState } from "react";
+import React, { Suspense, useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Navbar from "./components/Navbar";
 import BrandCard from "./components/BrandCard";
@@ -23,7 +23,7 @@ interface Brand {
   primaryColor?: string;
 }
 
-const HomePage = () => {
+const HomePageContent = () => {
   const [brands, setBrands] = useState<Brand[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -476,5 +476,11 @@ const HomePage = () => {
     </>
   );
 };
+
+const HomePage = () => (
+  <Suspense fallback={<div>Loading...</div>}>
+    <HomePageContent />
+  </Suspense>
+);
 
 export default HomePage;
