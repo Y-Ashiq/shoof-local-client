@@ -72,7 +72,7 @@ const SearchPage = () => {
     setModalError("");
     try {
       const res = await fetch(
-        `https://shoof-local.onrender.com/brands/${brandId}`,
+        `https://shoof-local.onrender.com/brands/${brandId}`
       );
       if (!res.ok) throw new Error("Failed to fetch brand details");
       const data = await res.json();
