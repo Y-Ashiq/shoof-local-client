@@ -48,7 +48,7 @@ const BrandReviewPage = () => {
     const fetchBrand = async () => {
       try {
         const res = await fetch(`http://localhost:3000/brands/${brandId}`, {
-          headers: { token },
+          headers: { token: token || "" },
         });
         if (res.status === 401) {
           setUnauthorized(true);
@@ -85,7 +85,7 @@ const BrandReviewPage = () => {
       const token = localStorage.getItem("token");
       try {
         const res = await fetch("http://localhost:3000/tags", {
-          headers: { token },
+          headers: { token: token || "" },
         });
         if (res.status === 401) {
           setUnauthorized(true);
