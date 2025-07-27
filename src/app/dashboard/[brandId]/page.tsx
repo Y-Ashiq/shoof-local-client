@@ -38,10 +38,18 @@ const BrandReviewPage = () => {
   const [unauthorized, setUnauthorized] = useState(false);
 
   useEffect(() => {
+    // Auth check
+    const token = localStorage.getItem("token");
+    if (!token) {
+      router.replace("/login");
+      return;
+    }
     if (!brandId) return;
     const fetchBrand = async () => {
       try {
-        const res = await fetch(`https://shoof-local.onrender.com/brands/${brandId}`, {});
+        const res = await fetch(`http://localhost:3000/brands/${brandId}`, {
+          headers: { token },
+        });
         if (res.status === 401) {
           setUnauthorized(true);
           return;
@@ -56,7 +64,7 @@ const BrandReviewPage = () => {
       }
     };
     fetchBrand();
-  }, [brandId]);
+  }, [brandId, router]);
 
   useEffect(() => {
     if (brand) {
@@ -74,8 +82,11 @@ const BrandReviewPage = () => {
   useEffect(() => {
     // Fetch available tags
     const fetchTags = async () => {
+      const token = localStorage.getItem("token");
       try {
-        const res = await fetch("https://shoof-local.onrender.com/tags");
+        const res = await fetch("http://localhost:3000/tags", {
+          headers: { token },
+        });
         if (res.status === 401) {
           setUnauthorized(true);
           return;
@@ -144,12 +155,13 @@ const BrandReviewPage = () => {
     setDeleteLoading(true);
     setDeleteError("");
     try {
+      const token = localStorage.getItem("token");
       const res = await fetch(
-        `https://shoof-local.onrender.com/dashboard/brands/${brandId}`,
+        `http://localhost:3000/dashboard/brands/${brandId}`,
         {
           method: "DELETE",
           headers: {
-            "x-api-key": "MySecertAPIKey",
+            token: token || "",
           },
         }
       );
@@ -171,13 +183,14 @@ const BrandReviewPage = () => {
     setPatchError("");
     setPatchSuccess("");
     try {
+      const token = localStorage.getItem("token");
       const res = await fetch(
-        `https://shoof-local.onrender.com/dashboard/brands/${brandId}`,
+        `http://localhost:3000/dashboard/brands/${brandId}`,
         {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",
-            "x-api-key": "MySecertAPIKey",
+            token: token || "",
           },
           body: JSON.stringify(fields),
         }

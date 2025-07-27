@@ -12,7 +12,6 @@ interface Brand {
 const DashboardPage = () => {
   const router = useRouter();
   const [brands, setBrands] = useState<Brand[]>([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [statusLoading, setStatusLoading] = useState<string | null>(null);
   const [statusError, setStatusError] = useState("");
@@ -27,9 +26,15 @@ const DashboardPage = () => {
   );
   const [dashboardSearchLoading, setDashboardSearchLoading] = useState(false);
   const [unauthorized, setUnauthorized] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchBrands = async () => {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        router.replace("/login");
+        return;
+      }
       setLoading(true);
       try {
         let url = `https://shoof-local.onrender.com/dashboard/brands?page=${page}`;
@@ -38,8 +43,7 @@ const DashboardPage = () => {
         }
         const res = await fetch(url, {
           headers: {
-            "x-api-key":process.env.NEXT_PUBLIC_API_KEY||""
-             ,
+            token: token,
           },
         });
         if (res.status === 401) {
@@ -59,15 +63,13 @@ const DashboardPage = () => {
         setBrands(newBrands);
         setTotalPages(newTotalPages);
       } catch (err: any) {
-        console.log(err);
-
         setError(err.message || "Unknown error");
       } finally {
         setLoading(false);
       }
     };
     fetchBrands();
-  }, [page, statusFilter]);
+  }, [page, statusFilter, router]);
 
   // Dashboard search effect
   useEffect(() => {
@@ -76,29 +78,31 @@ const DashboardPage = () => {
       return;
     }
     setDashboardSearchLoading(true);
-    let url = `https://shoof-local.onrender.com/dashboard/brands/search?search=${encodeURIComponent(
-      dashboardSearchQuery
-    )}`;
-    if (statusFilter !== "all") {
-      url += `&status=${statusFilter}`;
-    }
-    fetch(url, {
-      headers: {
-        "x-api-key":
-          "3s4SOsYJdBoMNGVf3LLKFsksm5FOnVwQsrvYbavm0Q3sNc3GEcGc5RwWp9wcYI6T",
-      },
-    })
-      .then((res) => {
+    const fetchSearch = async () => {
+      const token = localStorage.getItem("token");
+      let url = `https://shoof-local.onrender.com/dashboard/brands/search?search=${encodeURIComponent(
+        dashboardSearchQuery
+      )}`;
+      if (statusFilter !== "all") {
+        url += `&status=${statusFilter}`;
+      }
+      try {
+        const res = await fetch(url, {
+          headers: {
+            token: token || "",
+          },
+        });
         if (res.status === 401) {
           setUnauthorized(true);
-          return Promise.reject();
+          return;
         }
-        return res.json();
-      })
-      .then((data) =>
-        setDashboardSearchResults(Array.isArray(data) ? data : [])
-      )
-      .finally(() => setDashboardSearchLoading(false));
+        const data = await res.json();
+        setDashboardSearchResults(Array.isArray(data) ? data : []);
+      } finally {
+        setDashboardSearchLoading(false);
+      }
+    };
+    fetchSearch();
   }, [dashboardSearchQuery, statusFilter]);
 
   // Reset page to 1 when statusFilter changes
@@ -107,6 +111,7 @@ const DashboardPage = () => {
   }, [statusFilter]);
 
   const handleActionChange = async (brandId: string, action: string) => {
+    const token = localStorage.getItem("token");
     if (action === "delete") {
       setDeleteLoading(brandId);
       setDeleteError("");
@@ -116,8 +121,7 @@ const DashboardPage = () => {
           {
             method: "DELETE",
             headers: {
-              "x-api-key":
-                "3s4SOsYJdBoMNGVf3LLKFsksm5FOnVwQsrvYbavm0Q3sNc3GEcGc5RwWp9wcYI6T",
+              token: token || "",
             },
           }
         );
@@ -142,8 +146,7 @@ const DashboardPage = () => {
             method: "PATCH",
             headers: {
               "Content-Type": "application/json",
-              "x-api-key":
-                "3s4SOsYJdBoMNGVf3LLKFsksm5FOnVwQsrvYbavm0Q3sNc3GEcGc5RwWp9wcYI6T",
+              token: token || "",
             },
             body: JSON.stringify({ status: action }),
           }
@@ -167,6 +170,11 @@ const DashboardPage = () => {
     }
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    router.push("/login");
+  };
+
   if (unauthorized) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -180,6 +188,12 @@ const DashboardPage = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="w-full max-w-2xl mx-auto mt-12">
+        <button
+          onClick={handleLogout}
+          className="mb-4 bg-red-500 text-white px-4 py-2 rounded float-right"
+        >
+          Logout
+        </button>
         <h1 className="text-2xl font-bold mb-6 text-gray-800">
           Brands Pending Approval
         </h1>
