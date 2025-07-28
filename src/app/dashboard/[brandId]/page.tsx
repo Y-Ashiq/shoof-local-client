@@ -47,7 +47,7 @@ const BrandReviewPage = () => {
     if (!brandId) return;
     const fetchBrand = async () => {
       try {
-        const res = await fetch(`http://localhost:3000/brands/${brandId}`, {
+        const res = await fetch(`https://shoof-local.onrender.com/brands/${brandId}`, {
           headers: { token: token || "" },
         });
         if (res.status === 401) {
@@ -84,7 +84,7 @@ const BrandReviewPage = () => {
     const fetchTags = async () => {
       const token = localStorage.getItem("token");
       try {
-        const res = await fetch("http://localhost:3000/tags", {
+        const res = await fetch("https://shoof-local.onrender.com/tags", {
           headers: { token: token || "" },
         });
         if (res.status === 401) {
@@ -157,7 +157,7 @@ const BrandReviewPage = () => {
     try {
       const token = localStorage.getItem("token");
       const res = await fetch(
-        `http://localhost:3000/dashboard/brands/${brandId}`,
+        `https://shoof-local.onrender.com/dashboard/brands/${brandId}`,
         {
           method: "DELETE",
           headers: {
@@ -185,7 +185,7 @@ const BrandReviewPage = () => {
     try {
       const token = localStorage.getItem("token");
       const res = await fetch(
-        `http://localhost:3000/dashboard/brands/${brandId}`,
+        `https://shoof-local.onrender.com/dashboard/brands/${brandId}`,
         {
           method: "PATCH",
           headers: {
