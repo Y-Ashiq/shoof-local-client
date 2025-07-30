@@ -52,37 +52,6 @@ const HomePageContent = () => {
   const [pageSize] = useState(8); // Brands per page
 
   useEffect(() => {
-    const fetchBrands = async () => {
-      setLoading(true);
-      try {
-        const res = await fetch(
-          `https://shoof-local.onrender.com/brands?page=${page}`
-        );
-        if (!res.ok) throw new Error("Failed to fetch brands");
-        const data = await res.json();
-        let newBrands;
-        if (Array.isArray(data)) {
-          newBrands = data;
-          setTotalPages(1);
-        } else {
-          newBrands = data.brands || [];
-          setTotalPages(data.totalPages || 1);
-        }
-        if (newBrands.length === 0 && page > 1) {
-          // If no brands and not on first page, go back to previous page
-          router.push(`/?page=${page - 1}`);
-          return;
-        }
-        setBrands(newBrands);
-      } catch (err: any) {
-        setError(err.message || "Unknown error");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchBrands();
-  }, [page]);
-  useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [page]);
 
@@ -163,11 +132,7 @@ const HomePageContent = () => {
             url += `&tags=${encodeURIComponent(id)}`;
           });
         }
-        const res = await fetch(url, {
-          headers: {
-            "x-api-key": "MySecertAPIKey",
-          },
-        });
+        const res = await fetch(url, {});
         if (!res.ok) throw new Error("Failed to fetch brands");
         const data = await res.json();
         let newBrands;
@@ -210,11 +175,8 @@ const HomePageContent = () => {
         `https://shoof-local.onrender.com/brands/search?search=${encodeURIComponent(
           query
         )}`,
-        {
-          headers: {
-            "x-api-key": "MySecertAPIKey",
-          },
-        }
+      
+        
       );
       if (!res.ok) {
         setSearchResults([]);
